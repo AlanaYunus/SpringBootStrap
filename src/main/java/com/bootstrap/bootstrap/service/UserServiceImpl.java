@@ -1,7 +1,9 @@
 package com.bootstrap.bootstrap.service;
 
+import com.bootstrap.bootstrap.DAO.RoleDao;
 import com.bootstrap.bootstrap.DAO.UserDao;
 import com.bootstrap.bootstrap.model.User;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,13 +14,22 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private UserDao userDao;
+    private RoleDao roleDao;
+    private BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    public UserServiceImpl(UserDao userDao) {
+    public UserServiceImpl(UserDao userDao, RoleDao roleDao, BCryptPasswordEncoder bCryptPasswordEncoder) {
         this.userDao = userDao;
+        this.roleDao = roleDao;
+        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
     @Transactional
-    public void createUser(User user) { userDao.createUser(user); }
+    public void createUser(User user) {
+        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+        user.setRoles(roleDao.setRole(user.getRoleInd()));
+        user.setRoles(roleDao.setRole(user.getRoleInd()));
+        userDao.createUser(user);
+    }
 
     public User readUser(Long id) {
         return userDao.readUser(id);
@@ -26,7 +37,15 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     public void updateUser(User user) {
-        userDao.updateUser(user);
+        User userOld = userDao.getUserById(user.getId());
+        user.setRoles(roleDao.setRole(user.getRoleInd()));
+
+        if (user.getPassword().equals(userOld.getPassword())) {
+            userDao.updateUser(user);
+        } else {
+            user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
+            userDao.updateUser(user);
+        }
     }
 
     @Transactional
@@ -42,9 +61,11 @@ public class UserServiceImpl implements UserService {
         return userDao.allUsers();
     }
 
+    @Override
     public boolean isAllowed(Long id, Principal principal) {
-        return userDao.isAllowed(id, principal);
+        User user = getUserByName(principal.getName());
+        return user.getId() == id || user.getAuthorities().stream()
+                .anyMatch(role -> role.getAuthority().contains("ADMIN"));
     }
-
 }
 

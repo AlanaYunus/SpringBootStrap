@@ -21,5 +21,4 @@ public interface UserDao {
 
     List<User> allUsers();
 
-    boolean isAllowed(Long id, Principal principal);
 }

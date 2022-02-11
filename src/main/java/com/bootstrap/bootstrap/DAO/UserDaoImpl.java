@@ -1,13 +1,11 @@
 package com.bootstrap.bootstrap.DAO;
 
 import com.bootstrap.bootstrap.model.User;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
 import javax.persistence.TypedQuery;
-import java.security.Principal;
 import java.util.List;
 
 @Repository
@@ -16,19 +14,8 @@ public class UserDaoImpl implements UserDao {
     @PersistenceContext
     EntityManager entityManager;
 
-    private RoleDao roleDao;
-    private BCryptPasswordEncoder bCryptPasswordEncoder;
-
-    public UserDaoImpl(RoleDao roleDao, BCryptPasswordEncoder bCryptPasswordEncoder) {
-        this.roleDao = roleDao;
-        this.bCryptPasswordEncoder = bCryptPasswordEncoder;
-    }
-
     @Override
     public User createUser(User user) {
-        user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-        user.setRoles(roleDao.setRole(user.getRoleInd()));
-        user.setRoles(roleDao.setRole(user.getRoleInd()));
         entityManager.persist(user);
         return user;
     }
@@ -40,15 +27,7 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public User updateUser(User user) {
-        User userOld = getUserById(user.getId());
-        user.setRoles(roleDao.setRole(user.getRoleInd()));
-
-        if (user.getPassword().equals(userOld.getPassword())) {
-            entityManager.merge(user);
-        } else {
-            user.setPassword(bCryptPasswordEncoder.encode(user.getPassword()));
-            entityManager.merge(user);
-        }
+        entityManager.merge(user);
         return user;
     }
 
@@ -71,12 +50,5 @@ public class UserDaoImpl implements UserDao {
     @Override
     public List<User> allUsers() {
         return entityManager.createQuery("select u from User u", User.class).getResultList();
-    }
-
-    @Override
-    public boolean isAllowed(Long id, Principal principal) {
-        User user = getUserByName(principal.getName());
-        return user.getId() == id || user.getAuthorities().stream()
-                .anyMatch(role -> role.getAuthority().contains("ADMIN"));
     }
 }
